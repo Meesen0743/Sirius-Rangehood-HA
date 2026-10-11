@@ -114,6 +114,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=timedelta(seconds=scan_interval),
     )
 
+    def set_optimistic_cap(uid: str, cap_id: str, value: Any) -> None:
+        """Record optimistic capability value and immediately update coordinator."""
+        live_state.setdefault(uid, {})[cap_id] = value
+        data = coordinator.data
+        if not data or uid not in data:
+            return
+        new_data = dict(data)
+        dev = dict(new_data[uid])
+        merged = dict(dev.get("caps", {}))
+        merged[cap_id] = value
+        dev["caps"] = merged
+        new_data[uid] = dev
+        coordinator.async_set_updated_data(new_data)
+
+    coordinator.set_optimistic_cap = set_optimistic_cap
+
     await coordinator.async_config_entry_first_refresh()
 
     def _handle_mqtt_status(uid: str, caps: Dict[str, Any]) -> None:
@@ -134,7 +150,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         hass.loop.call_soon_threadsafe(_apply)
 
-    mqtt_client = SiriusMqttClient(email, password, _handle_mqtt_status)
+    device_uids = list(coordinator.data.keys()) if coordinator.data else []
+    mqtt_client = SiriusMqttClient(email, password, _handle_mqtt_status, device_uids=device_uids)
     await hass.async_add_executor_job(mqtt_client.start)
 
     hass.data.setdefault(DOMAIN, {})

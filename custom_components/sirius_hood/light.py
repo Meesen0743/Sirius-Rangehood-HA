@@ -139,7 +139,7 @@ class SiriusHoodLight(CoordinatorEntity, LightEntity):
     @property
     def is_on(self) -> bool:
         """Return true if light is on."""
-        return bool(self._caps.get(self._on_cap, 0))
+        return int(self._caps.get(self._on_cap, 0) or 0) == 1
 
     @property
     def brightness(self) -> Optional[int]:
@@ -172,20 +172,26 @@ class SiriusHoodLight(CoordinatorEntity, LightEntity):
             bright_pct = max(1, min(100, int(round((bright_255 / 255.0) * 100.0))))
             await self._client.set_capability(self._device_uid, self._bright_cap, bright_pct)
             self._caps[self._bright_cap] = bright_pct
+            if hasattr(self.coordinator, "set_optimistic_cap"):
+                self.coordinator.set_optimistic_cap(self._device_uid, self._bright_cap, bright_pct)
 
         if ATTR_COLOR_TEMP_KELVIN in kwargs:
             kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
             await self._client.set_capability(self._device_uid, self._temp_cap, kelvin)
             self._caps[self._temp_cap] = kelvin
+            if hasattr(self.coordinator, "set_optimistic_cap"):
+                self.coordinator.set_optimistic_cap(self._device_uid, self._temp_cap, kelvin)
 
         await self._client.set_capability(self._device_uid, self._on_cap, 1)
         self._caps[self._on_cap] = 1
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, self._on_cap, 1)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
         await self._client.set_capability(self._device_uid, self._on_cap, 0)
         self._caps[self._on_cap] = 0
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, self._on_cap, 0)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()

@@ -111,9 +111,8 @@ class SiriusHoodFan(CoordinatorEntity, FanEntity):
     @property
     def is_on(self) -> bool:
         """Return true if fan is on."""
-        speed = self._caps.get(CAP_FAN_SPEED, 0)
-        boost = self._caps.get(CAP_FAN_BOOST, 0)
-        return int(speed or 0) > 0 or int(boost or 0) > 0
+        speed = int(self._caps.get(CAP_FAN_SPEED, 0) or 0)
+        return speed > 0
 
     @property
     def percentage(self) -> Optional[int]:
@@ -126,8 +125,8 @@ class SiriusHoodFan(CoordinatorEntity, FanEntity):
     @property
     def preset_mode(self) -> Optional[str]:
         """Return the current preset mode."""
-        boost = int(self._caps.get(CAP_FAN_BOOST, 0) or 0)
-        if boost > 0:
+        speed = int(self._caps.get(CAP_FAN_SPEED, 0) or 0)
+        if speed == 4:
             return PRESET_BOOST
         return PRESET_NORMAL
 
@@ -141,8 +140,8 @@ class SiriusHoodFan(CoordinatorEntity, FanEntity):
             attrs["flow_m3h"] = self._caps[CAP_FAN_FLOW]
         if CAP_BIPOWER in self._caps:
             attrs["bipower_enabled"] = bool(self._caps[CAP_BIPOWER])
-        if CAP_FAN_BOOST in self._caps:
-            attrs["boost_active"] = bool(self._caps[CAP_FAN_BOOST])
+        speed = int(self._caps.get(CAP_FAN_SPEED, 0) or 0)
+        attrs["boost_active"] = (speed == 4)
         return attrs
 
     async def async_set_percentage(self, percentage: int) -> None:
@@ -153,11 +152,10 @@ class SiriusHoodFan(CoordinatorEntity, FanEntity):
 
         speed = int(round(percentage_to_ranged_value(SPEED_RANGE, percentage)))
         await self._client.set_fan_speed(self._device_uid, speed)
-        # Optimistic update
         self._caps[CAP_FAN_SPEED] = speed
-        self._caps[CAP_FAN_BOOST] = 0
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, CAP_FAN_SPEED, speed)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()
 
     async def async_turn_on(
         self,
@@ -179,24 +177,23 @@ class SiriusHoodFan(CoordinatorEntity, FanEntity):
         target_speed = current_speed if current_speed > 0 else 1
         await self._client.set_fan_speed(self._device_uid, target_speed)
         self._caps[CAP_FAN_SPEED] = target_speed
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, CAP_FAN_SPEED, target_speed)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the fan."""
         await self._client.set_fan_speed(self._device_uid, 0)
         self._caps[CAP_FAN_SPEED] = 0
-        self._caps[CAP_FAN_BOOST] = 0
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, CAP_FAN_SPEED, 0)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset mode."""
-        if preset_mode == PRESET_BOOST:
-            await self._client.set_fan_boost(self._device_uid, True)
-            self._caps[CAP_FAN_BOOST] = 1
-        else:
-            await self._client.set_fan_boost(self._device_uid, False)
-            self._caps[CAP_FAN_BOOST] = 0
+        target_speed = 4 if preset_mode == PRESET_BOOST else 3
+        await self._client.set_fan_speed(self._device_uid, target_speed)
+        self._caps[CAP_FAN_SPEED] = target_speed
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, CAP_FAN_SPEED, target_speed)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()

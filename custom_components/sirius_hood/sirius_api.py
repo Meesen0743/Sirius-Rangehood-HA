@@ -174,8 +174,8 @@ class SiriusApiClient:
         await self.set_capability(device_uid, "device.fanSpeed", speed)
 
     async def set_fan_boost(self, device_uid: str, boost: bool) -> None:
-        """Set fan boost mode."""
-        await self.set_capability(device_uid, "device.boostValue", 1 if boost else 0)
+        """Set fan boost mode (Speed 4)."""
+        await self.set_capability(device_uid, "device.fanSpeed", 4 if boost else 3)
 
     async def set_bipower(self, device_uid: str, enabled: bool) -> None:
         """Toggle Smart-Switch Bi-Power ECO / High Power mode."""

@@ -130,18 +130,20 @@ class SiriusHoodSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return true if switch is on."""
-        return bool(self._caps.get(self._cap_id, 0))
+        return int(self._caps.get(self._cap_id, 0) or 0) == 1
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         await self._client.set_capability(self._device_uid, self._cap_id, 1)
         self._caps[self._cap_id] = 1
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, self._cap_id, 1)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         await self._client.set_capability(self._device_uid, self._cap_id, 0)
         self._caps[self._cap_id] = 0
+        if hasattr(self.coordinator, "set_optimistic_cap"):
+            self.coordinator.set_optimistic_cap(self._device_uid, self._cap_id, 0)
         self.async_write_ha_state()
-        await self.coordinator.async_request_refresh()

@@ -16,7 +16,7 @@ MQTT_HOST = "sirius.iotpga.it"
 MQTT_PORT = 8884
 MQTT_TENANT = "codermine"
 
-# Device Capabilities
+CAP_ONOFF = "device.onOff"
 CAP_FAN_SPEED = "device.fanSpeed"
 CAP_FAN_BOOST = "device.boostValue"
 CAP_FAN_FLOW = "device.fanFlow"

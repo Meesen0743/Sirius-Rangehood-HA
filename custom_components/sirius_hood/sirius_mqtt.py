@@ -10,7 +10,7 @@ import json
 import logging
 import ssl
 import uuid
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List, Optional
 
 import paho.mqtt.client as mqtt
 
@@ -27,11 +27,23 @@ class SiriusMqttClient:
         email: str,
         password: str,
         on_status: Callable[[str, Dict[str, Any]], None],
+        device_uids: Optional[List[str]] = None,
     ) -> None:
         self._email = email
         self._password = password
         self._on_status = on_status
+        self._device_uids: set[str] = set(device_uids or [])
         self._client: mqtt.Client | None = None
+
+    def add_device(self, uid: str) -> None:
+        """Add device UID to active subscription list."""
+        if not uid or uid in self._device_uids:
+            return
+        self._device_uids.add(uid)
+        if self._client:
+            _LOGGER.debug("Sirius MQTT subscribing to new device: %s", uid)
+            self._client.subscribe(f"root/{MQTT_TENANT}/devices/{uid}/status", 0)
+            self._client.subscribe(f"root/{MQTT_TENANT}/devices/{uid}/response/#", 0)
 
     def start(self) -> None:
         """Connect and start the network loop (blocking setup, run in executor)."""
@@ -61,8 +73,12 @@ class SiriusMqttClient:
 
     def _handle_connect(self, client, userdata, flags, rc, *args) -> None:
         _LOGGER.debug("Sirius MQTT connected (rc=%s)", rc)
-        # Resubscribed on every (re)connect.
-        client.subscribe(f"root/{MQTT_TENANT}/devices/+/status", 0)
+        # Broker enforces ACLs strictly: wildcards '+' and '#' cause immediate kick/disconnect.
+        # Subscribe specifically per device UID.
+        for uid in self._device_uids:
+            _LOGGER.debug("Sirius MQTT subscribing to device: %s", uid)
+            client.subscribe(f"root/{MQTT_TENANT}/devices/{uid}/status", 0)
+            client.subscribe(f"root/{MQTT_TENANT}/devices/{uid}/response/#", 0)
 
     def _handle_message(self, client, userdata, msg) -> None:
         try:
