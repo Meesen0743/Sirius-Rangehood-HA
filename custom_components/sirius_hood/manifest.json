@@ -1,0 +1,12 @@
+{
+  "domain": "sirius_hood",
+  "name": "Sirius Smart-Switch Range Hood",
+  "codeowners": ["@Meesen0743"],
+  "config_flow": true,
+  "documentation": "https://github.com/Meesen0743/Sirius-Rangehood-HA",
+  "issue_tracker": "https://github.com/Meesen0743/Sirius-Rangehood-HA/issues",
+  "integration_type": "hub",
+  "iot_class": "cloud_push",
+  "requirements": ["paho-mqtt>=1.6.1"],
+  "version": "1.0.3"
+}

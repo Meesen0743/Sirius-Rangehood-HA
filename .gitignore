@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.token_cache.json
+*.jsonl
+*.zip
+*.pem
+*.key
+*.crt
+.env
+.env.*
+.DS_Store
+Thumbs.db
+node_modules/
+sirius_cli.js
+test_confirm.js

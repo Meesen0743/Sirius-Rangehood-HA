@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sirius Smart-Switch Range Hood",
+        "description": "Log in with your secondary Sirius account that has been shared access to your range hood.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Sirius Cloud API.",
+      "invalid_auth": "Invalid email or password. Ensure your secondary account is confirmed.",
+      "unknown": "Unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Sirius account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sirius Range Hood Options",
+        "description": "Adjust polling interval for status updates.",
+        "data": {
+          "scan_interval": "Polling Interval (seconds)"
+        }
+      }
+    }
+  }
+}
