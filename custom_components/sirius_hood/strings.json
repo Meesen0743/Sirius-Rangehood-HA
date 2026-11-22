@@ -8,15 +8,34 @@
           "email": "Email",
           "password": "Password"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Sirius Hood",
+        "description": "Please enter the password for Sirius account {email}.",
+        "data": {
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Sirius Hood",
+        "description": "Update credentials for Sirius Range Hood account {email}.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to Sirius Cloud API.",
       "invalid_auth": "Invalid email or password. Ensure your secondary account is confirmed.",
+      "wrong_account": "You must use the same Sirius account email when reconfiguring.",
       "unknown": "Unexpected error occurred."
     },
     "abort": {
-      "already_configured": "This Sirius account is already configured."
+      "already_configured": "This Sirius account is already configured.",
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Re-configuration was successful.",
+      "wrong_account": "You must use the same Sirius account email when reconfiguring."
     }
   },
   "options": {

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 import voluptuous as vol
 
@@ -27,6 +27,18 @@ class SiriusHoodConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Sirius Range Hood."""
 
     VERSION = 1
+
+    def _get_reauth_entry(self) -> config_entries.ConfigEntry:
+        """Get the config entry to reauthenticate."""
+        if hasattr(super(), "_get_reauth_entry"):
+            return super()._get_reauth_entry()
+        return self.hass.config_entries.async_get_entry(self.context["entry_id"])
+
+    def _get_reconfigure_entry(self) -> config_entries.ConfigEntry:
+        """Get the config entry to reconfigure."""
+        if hasattr(super(), "_get_reconfigure_entry"):
+            return super()._get_reconfigure_entry()
+        return self.hass.config_entries.async_get_entry(self.context["entry_id"])
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -72,6 +84,106 @@ class SiriusHoodConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_EMAIL): str,
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> config_entries.ConfigFlowResult:
+        """Handle re-authentication when credentials expire or fail."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> config_entries.ConfigFlowResult:
+        """Dialog to confirm and update password for re-authentication."""
+        errors: Dict[str, str] = {}
+        reauth_entry = self._get_reauth_entry()
+        email = reauth_entry.data[CONF_EMAIL]
+
+        if user_input is not None:
+            password = user_input[CONF_PASSWORD].strip()
+
+            session = async_get_clientsession(self.hass)
+            client = SiriusApiClient(email=email, password=password, session=session)
+
+            try:
+                await client.login()
+                return self.async_update_reload_and_abort(
+                    reauth_entry,
+                    data={
+                        **reauth_entry.data,
+                        CONF_PASSWORD: password,
+                    },
+                    reason="reauth_successful",
+                )
+            except SiriusAuthError:
+                errors["base"] = "invalid_auth"
+            except SiriusApiError:
+                errors["base"] = "cannot_connect"
+            except Exception as err:
+                _LOGGER.exception("Unexpected exception during reauth: %s", err)
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            description_placeholders={"email": email},
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle reconfiguration initiated by the user."""
+        errors: Dict[str, str] = {}
+        reconfigure_entry = self._get_reconfigure_entry()
+
+        if user_input is not None:
+            email = user_input[CONF_EMAIL].strip().lower()
+            password = user_input[CONF_PASSWORD].strip()
+
+            if email != reconfigure_entry.data[CONF_EMAIL].lower():
+                errors["base"] = "wrong_account"
+            else:
+                session = async_get_clientsession(self.hass)
+                client = SiriusApiClient(email=email, password=password, session=session)
+
+                try:
+                    await client.login()
+                    return self.async_update_reload_and_abort(
+                        reconfigure_entry,
+                        data={
+                            **reconfigure_entry.data,
+                            CONF_EMAIL: email,
+                            CONF_PASSWORD: password,
+                        },
+                        reason="reconfigure_successful",
+                    )
+                except SiriusAuthError:
+                    errors["base"] = "invalid_auth"
+                except SiriusApiError:
+                    errors["base"] = "cannot_connect"
+                except Exception as err:
+                    _LOGGER.exception("Unexpected exception during reconfigure: %s", err)
+                    errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            description_placeholders={"email": reconfigure_entry.data.get(CONF_EMAIL, "")},
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_EMAIL,
+                        default=reconfigure_entry.data.get(CONF_EMAIL, ""),
+                    ): str,
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),

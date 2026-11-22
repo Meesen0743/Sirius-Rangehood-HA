@@ -125,6 +125,10 @@ class SiriusApiClient:
                     async with session.request(method, url, json=json_data, headers=headers) as retry_res:
                         return await self._parse_response(retry_res)
                 return await self._parse_response(response)
+        except aiohttp.ClientResponseError as err:
+            if err.status == 401:
+                raise SiriusAuthError(f"Authentication failed: {err}") from err
+            raise SiriusApiError(f"API request failed [{method} {path}]: {err}") from err
         except aiohttp.ClientError as err:
             raise SiriusApiError(f"API request failed [{method} {path}]: {err}") from err
 

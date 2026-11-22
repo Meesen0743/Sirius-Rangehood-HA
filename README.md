@@ -68,3 +68,12 @@ Because Sirius cloud accounts are designed for single-session mobile phone apps,
    - **Email**: `your_secondary_account@example.com`
    - **Password**: `your_password`
 5. Click **Submit**. Your range hood fan, lights, switches, and sensors will immediately appear!
+
+---
+
+## 🔐 Re-authentication & Reconfiguration
+
+If you change your Sirius account password or credentials expire:
+- **Automatic Re-authentication**: Home Assistant will automatically notify you that re-authentication is required with a **Reauthenticate** button on the integration card.
+- **Manual Reconfiguration**: You can update your credentials at any time by clicking the three dots (`...`) on the Sirius integration card under **Settings** $\rightarrow$ **Devices & Services** and selecting **Reconfigure**.
+

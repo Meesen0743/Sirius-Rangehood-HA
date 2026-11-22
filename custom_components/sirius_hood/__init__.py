@@ -8,6 +8,7 @@ from typing import Any, Dict
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -44,9 +45,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await client.login()
     except SiriusAuthError as err:
         _LOGGER.error("Failed to authenticate with Sirius Cloud: %s", err)
-        return False
+        raise ConfigEntryAuthFailed(err) from err
     except SiriusApiError as err:
         _LOGGER.warning("Could not reach Sirius Cloud during setup: %s", err)
+        raise ConfigEntryNotReady(err) from err
 
     # Live state received over MQTT. The REST shadow is stale, so these
     # values always take precedence over what the poll returns.
@@ -103,6 +105,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 }
 
             return devices_map
+        except SiriusAuthError as err:
+            _LOGGER.error("Authentication failed during update: %s", err)
+            raise ConfigEntryAuthFailed(err) from err
         except Exception as err:
             raise UpdateFailed(f"Error communicating with Sirius Cloud: {err}") from err
 
@@ -171,8 +176,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        data = hass.data[DOMAIN].pop(entry.entry_id)
-        await hass.async_add_executor_job(data["mqtt"].stop)
+        data = hass.data[DOMAIN].pop(entry.entry_id, None)
+        if data and "mqtt" in data:
+            await hass.async_add_executor_job(data["mqtt"].stop)
     return unload_ok
 
 
